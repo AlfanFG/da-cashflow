@@ -14,6 +14,10 @@ export default auth((req) => {
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 
+  if (req.nextUrl.pathname === "/") {
+    return NextResponse.redirect(new URL(isLoggedIn ? "/dashboard" : "/login", req.url));
+  }
+
   return NextResponse.next();
 });
 

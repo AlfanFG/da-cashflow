@@ -14,7 +14,7 @@ import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { createTransaction } from "@/lib/actions/transaction.actions";
-import { getCategories } from "@/lib/actions/dashboard.actions";
+import { getCategories } from "@/lib/actions/category.actions";
 import { getSavingGoals } from "@/lib/actions/saving-goal.actions";
 import { toast } from "sonner";
 import type { Category, SavingGoal } from "@/lib/types";

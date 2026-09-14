@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useState, Suspense } from "react";
-import { LayoutDashboard, Receipt, PiggyBank, Menu, Wallet, User, Settings } from "lucide-react";
+import { LayoutDashboard, Receipt, PiggyBank, Menu, Wallet, User, Settings, Tags, ChartNoAxesColumnIncreasing } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/components/ui/sheet";
 
@@ -11,6 +11,8 @@ const navItems = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { title: "Riwayat", href: "/dashboard/history", icon: Receipt },
   { title: "Tabungan", href: "/dashboard/savings", icon: PiggyBank },
+  { title: "Budget", href: "/dashboard/budgets", icon: ChartNoAxesColumnIncreasing },
+  { title: "Kategori", href: "/dashboard/categories", icon: Tags },
 ];
 
 const bottomNavItems = [
@@ -19,7 +21,7 @@ const bottomNavItems = [
 ];
 
 // Pages yang membaca filter — Tabungan & Profile tidak perlu filter bulan
-const FILTER_AWARE_PAGES = ["/dashboard", "/dashboard/history"];
+const FILTER_AWARE_PAGES = ["/dashboard", "/dashboard/history", "/dashboard/budgets"];
 
 function SidebarContent({ onClickLink }: { onClickLink?: () => void }) {
   const pathname = usePathname();

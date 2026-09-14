@@ -2,13 +2,9 @@
 
 # This is NOT the Next.js you know
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in 
-ode_modules/next/dist/docs/ (resolved from this file's directory; in monorepos the 
-ext package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
 
-This block is written and re-added by 
-ext dev — verify at 
-ode_modules/next/dist/server/lib/generate-agent-files.js. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
 
@@ -129,3 +125,14 @@ Phase 8: Global Filter Enhancement (Month/Year Filter Fix)
   [x] Fix dashboard/page.tsx & history/page.tsx: await searchParams sebagai Promise (Next.js 16 async API).
   [x] Verifikasi: npm run build sukses exit code 0, semua halaman terdaftar sebagai Dynamic (ƒ).
   [x] Verifikasi: Ganti bulan di Dashboard → pindah ke Riwayat → filter tetap sama.
+
+Phase 9: Budget Allocation & Category Customization
+[x] Schema Prisma: model Budget, relasi User/Category, UUID konsisten untuk Transaction, SavingGoal, dan SavingDeposit.
+[x] Sinkronisasi Neon: tabel budgets dan unique constraint userId/categoryId/month/year tersedia tanpa reset data.
+[x] Category Server Actions: query, create, update, delete dengan autentikasi, validasi, dan ownership check.
+[x] Halaman /dashboard/categories: tab pemasukan/pengeluaran, tambah, edit, dan hapus kategori.
+[x] Budget Server Actions: upsert alokasi dan progress pengeluaran per kategori/bulan.
+[x] Halaman /dashboard/budgets: progress, sisa alokasi, status normal/peringatan/melewati batas, dan modal setel alokasi.
+[x] Sidebar: menu Kategori dan Budget; filter bulan/tahun dipertahankan pada halaman Budget.
+[x] Integrasi transaksi: kategori live dari database dan mutasi transaksi merevalidasi dashboard budget.
+[x] Verifikasi: prisma validate, Prisma Client standard generate, TypeScript noEmit, dan db push sukses; koneksi PostgreSQL serta delegate/tabel db.budget terverifikasi lewat query baca-saja. Jika client schema berubah saat Next dev hidup, restart server dev sebelum menguji route terkait. Build webpack melewati kompilasi, TypeScript, serta generasi 11 halaman; finalisasi build tidak mengembalikan exit bersih di environment agent. Turbopack ditolak OS saat spawn proses.

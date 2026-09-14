@@ -1,0 +1,16 @@
+{
+  "rtk-optimizer": {
+    "PreToolUse": [
+      {
+        "matcher": "run_command",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node rtk-hook.js",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -118,5 +118,6 @@ export async function depositToSavingGoal(data: {
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/history");
   revalidatePath("/dashboard/savings");
+  revalidatePath("/dashboard/budgets");
   return { success: true };
 }

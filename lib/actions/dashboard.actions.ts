@@ -107,12 +107,3 @@ export async function getCashflowTrend(month: number, year: number) {
 
   return trend;
 }
-
-export async function getCategories() {
-  const session = await auth();
-  if (!session?.user?.id) return [];
-  
-  return await db.category.findMany({
-    where: { userId: session.user.id },
-  });
-}

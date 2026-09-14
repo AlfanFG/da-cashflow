@@ -13,7 +13,7 @@ import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { updateTransaction } from "@/lib/actions/transaction.actions";
-import { getCategories } from "@/lib/actions/dashboard.actions";
+import { getCategories } from "@/lib/actions/category.actions";
 import { toast } from "sonner";
 
 interface EditTransactionModalProps {

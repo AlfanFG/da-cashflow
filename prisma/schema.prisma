@@ -20,6 +20,7 @@ model User {
   transactions Transaction[]
   savingGoals  SavingGoal[]
   categories   Category[]
+  budgets      Budget[]
 
   @@map("users")
 }
@@ -33,13 +34,14 @@ model Category {
   userId       String
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions Transaction[]
+  budgets      Budget[]
   createdAt    DateTime      @default(now())
 
   @@map("categories")
 }
 
 model Transaction {
-  id         String          @id @default(cuid())
+  id         String          @id @default(uuid())
   amount     Float
   type       TransactionType
   date       DateTime
@@ -55,7 +57,7 @@ model Transaction {
 }
 
 model SavingGoal {
-  id            String           @id @default(cuid())
+  id            String           @id @default(uuid())
   name          String
   targetAmount  Float
   currentAmount Float            @default(0)
@@ -70,7 +72,7 @@ model SavingGoal {
 }
 
 model SavingDeposit {
-  id           String     @id @default(cuid())
+  id           String     @id @default(uuid())
   amount       Float
   note         String?
   date         DateTime   @default(now())
@@ -79,6 +81,22 @@ model SavingDeposit {
   createdAt    DateTime   @default(now())
 
   @@map("saving_deposits")
+}
+
+model Budget {
+  id           String   @id @default(uuid())
+  amount       Float
+  month        Int
+  year         Int
+  categoryId   String
+  userId       String
+  category     Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([userId, categoryId, month, year])
+  @@map("budgets")
 }
 
 enum TransactionType {

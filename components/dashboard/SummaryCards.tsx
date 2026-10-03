@@ -88,11 +88,6 @@ export function SummaryCards({
                 <p className={"text-3xl font-bold tracking-tight " + card.textColor}>
                   {formatCurrency(card.value)}
                 </p>
-                {card.editable && initialBalance !== 0 && (
-                  <p className="text-xs text-white/60 mt-1">
-                    Termasuk saldo awal {formatCurrency(initialBalance)}
-                  </p>
-                )}
               </CardContent>
             </Card>
           );

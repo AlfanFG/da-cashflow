@@ -160,3 +160,11 @@ Phase 11: Bug Fix — History Filter Timezone (WIB / UTC+7)
 [x] getCashflowTrend: Loop grouping kini mengkonversi UTC → WIB (+7 jam) sebelum mengambil tanggal, agar chart trend per hari akurat.
 [x] Helper getMonthBoundsWIB() ditambahkan di dashboard.actions.ts untuk menghindari duplikasi kode.
 
+Phase 12: Fitur Edit Saldo (Initial Balance)
+[x] Schema Prisma: tambah field `initialBalance Float @default(0)` pada model User.
+[x] Sinkronisasi Neon: `prisma db push` + `prisma generate` sukses.
+[x] Server Action: `lib/actions/balance.actions.ts` — fungsi `updateInitialBalance()` dan `getInitialBalance()`.
+[x] getDashboardSummary: Fetch `user.initialBalance` sekalian, tambahkan ke `transactionBalance` untuk mendapat `totalBalance`. Return juga `initialBalance` sebagai field terpisah.
+[x] Komponen EditBalanceModal: modal dengan breakdown saldo (dari transaksi + saldo awal = total), input saldo awal baru, validasi angka + minus.
+[x] Komponen SummaryCards: tambah tombol Pencil (✏️) di card Total Saldo. Klik buka EditBalanceModal. Jika saldo awal ≠ 0, tampilkan hint "Termasuk saldo awal Rp X" di bawah nominal.
+[x] Dashboard page: teruskan prop `initialBalance` dari summary ke SummaryCards.

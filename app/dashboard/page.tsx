@@ -34,6 +34,7 @@ export default async function DashboardPage({
         totalBalance={summary.totalBalance}
         totalIncomeThisMonth={summary.totalIncomeThisMonth}
         totalExpenseThisMonth={summary.totalExpenseThisMonth}
+        initialBalance={summary.initialBalance}
       />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

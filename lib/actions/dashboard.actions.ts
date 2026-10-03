@@ -15,22 +15,32 @@ function getMonthBoundsWIB(month: number, year: number) {
 export async function getDashboardSummary(month: number, year: number) {
   const session = await auth();
   if (!session?.user?.id) {
-    return { totalBalance: 0, totalIncomeThisMonth: 0, totalExpenseThisMonth: 0 };
+    return { totalBalance: 0, totalIncomeThisMonth: 0, totalExpenseThisMonth: 0, initialBalance: 0 };
   }
 
   const { startDate, endDate } = getMonthBoundsWIB(month, year);
 
-  // Ambil semua transaksi (unlimited) untuk saldo total
-  const allTransactions = await db.transaction.findMany({
-    where: { userId: session.user.id },
-    select: { amount: true, type: true },
+  // Ambil semua transaksi (unlimited) untuk saldo total + saldo awal user
+  const [allTransactions, user] = await Promise.all([
+    db.transaction.findMany({
+      where: { userId: session.user.id },
+      select: { amount: true, type: true },
+    }),
+    db.user.findUnique({
+      where: { id: session.user.id },
+      select: { initialBalance: true },
+    }),
+  ]);
+
+  const initialBalance = user?.initialBalance ?? 0;
+
+  let transactionBalance = 0;
+  allTransactions.forEach((tx) => {
+    if (tx.type === "INCOME") transactionBalance += tx.amount;
+    else transactionBalance -= tx.amount;
   });
 
-  let totalBalance = 0;
-  allTransactions.forEach((tx) => {
-    if (tx.type === "INCOME") totalBalance += tx.amount;
-    else totalBalance -= tx.amount;
-  });
+  const totalBalance = transactionBalance + initialBalance;
 
   // Ambil transaksi hanya di bulan ini
   const thisMonthTransactions = await db.transaction.findMany({
@@ -49,7 +59,7 @@ export async function getDashboardSummary(month: number, year: number) {
     else totalExpenseThisMonth += tx.amount;
   });
 
-  return { totalBalance, totalIncomeThisMonth, totalExpenseThisMonth };
+  return { totalBalance, totalIncomeThisMonth, totalExpenseThisMonth, initialBalance };
 }
 
 export async function getExpenseBreakdown(month: number, year: number) {

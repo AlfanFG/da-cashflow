@@ -136,3 +136,27 @@ Phase 9: Budget Allocation & Category Customization
 [x] Sidebar: menu Kategori dan Budget; filter bulan/tahun dipertahankan pada halaman Budget.
 [x] Integrasi transaksi: kategori live dari database dan mutasi transaksi merevalidasi dashboard budget.
 [x] Verifikasi: prisma validate, Prisma Client standard generate, TypeScript noEmit, dan db push sukses; koneksi PostgreSQL serta delegate/tabel db.budget terverifikasi lewat query baca-saja. Jika client schema berubah saat Next dev hidup, restart server dev sebelum menguji route terkait. Build webpack melewati kompilasi, TypeScript, serta generasi 11 halaman; finalisasi build tidak mengembalikan exit bersih di environment agent. Turbopack ditolak OS saat spawn proses.
+
+Phase 10: Savings Summary & Total Pencapaian Tracking
+[x] Ringkasan Total Tabungan Terkumpul, Tercapai & Belum Tercapai:
+  [x] Halaman /dashboard/savings:
+    - Ditambahkan 3 Kartu Ringkasan (Summary Cards) di bagian atas:
+      1. Total Tabungan Terkumpul (akumulasi nominal terkumpul seluruh target beserta persentase terhadap total target).
+      2. Total Telah Tercapai (jumlah target tercapai dan total nominal tabungan yang sukses diselesaikan).
+      3. Total Belum Tercapai / Target Aktif (jumlah target aktif, total nominal terkumpul, total target, serta sisa dana yang masih harus ditabung).
+    - Header sub-bagian "Target Belum Tercapai (Aktif)" dan "Target Telah Tercapai" kini menyertakan rincian teks total nominal (terkumpul, target, sisa).
+  [x] Widget Dashboard (SavingGoalsWidget):
+    - Ditambahkan badge ringkasan total nominal dan jumlah target untuk status "Tercapai" dan "Belum Tercapai" pada header widget dashboard.
+  [x] Verifikasi: TypeScript noEmit sukses tanpa error.
+
+
+Phase 11: Bug Fix — History Filter Timezone (WIB / UTC+7)
+[x] Root Cause: Transaksi yang diinput di browser WIB (UTC+7) tersimpan di DB sebagai UTC (misal: 1 Okt 00:00 WIB = 30 Sep 17:00 UTC). Query batas tanggal yang menggunakan `new Date(year, month-1, 1)` menghasilkan batas UTC yang salah, sehingga transaksi awal bulan tidak masuk ke hasil filter bulan ini.
+[x] Fix: Semua query batas tanggal bulanan kini menggunakan offset WIB secara eksplisit.
+[x] Files yang diupdate:
+  - lib/actions/transaction.actions.ts — getTransactions()
+  - lib/actions/dashboard.actions.ts — getDashboardSummary(), getExpenseBreakdown(), getCashflowTrend()
+  - lib/actions/budget.actions.ts — getBudgetsProgress()
+[x] getCashflowTrend: Loop grouping kini mengkonversi UTC → WIB (+7 jam) sebelum mengambil tanggal, agar chart trend per hari akurat.
+[x] Helper getMonthBoundsWIB() ditambahkan di dashboard.actions.ts untuk menghindari duplikasi kode.
+

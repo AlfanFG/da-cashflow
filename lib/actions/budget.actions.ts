@@ -67,8 +67,8 @@ export async function getBudgetsProgress(month: number, year: number) {
   });
 
   // Ambil total pengeluaran per kategori untuk bulan ini
-  const startDate = new Date(filter.year, filter.month - 1, 1);
-  const endDate = new Date(filter.year, filter.month, 0, 23, 59, 59, 999);
+  const startDate = new Date(Date.UTC(filter.year, filter.month - 1, 1, 0, 0, 0) - 7 * 3600 * 1000);
+  const endDate = new Date(Date.UTC(filter.year, filter.month, 1, 0, 0, 0) - 7 * 3600 * 1000 - 1);
 
   const transactions = await db.transaction.groupBy({
     by: ["categoryId"],

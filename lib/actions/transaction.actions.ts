@@ -19,8 +19,8 @@ export async function getTransactions(month: number, year: number) {
   if (!session?.user?.id) return [];
 
   // Hitung rentang tanggal (dari hari pertama bulan tsb sampai hari terakhir)
-  const startDate = new Date(year, month - 1, 1);
-  const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+  const startDate = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0) - 7 * 3600 * 1000);
+  const endDate = new Date(Date.UTC(year, month, 1, 0, 0, 0) - 7 * 3600 * 1000 - 1);
 
   return await db.transaction.findMany({
     where: {

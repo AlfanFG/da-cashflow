@@ -168,3 +168,13 @@ Phase 12: Fitur Edit Saldo (Initial Balance)
 [x] Komponen EditBalanceModal: modal dengan breakdown saldo (dari transaksi + saldo awal = total), input saldo awal baru, validasi angka + minus.
 [x] Komponen SummaryCards: tambah tombol Pencil (✏️) di card Total Saldo. Klik buka EditBalanceModal. Jika saldo awal ≠ 0, tampilkan hint "Termasuk saldo awal Rp X" di bawah nominal.
 [x] Dashboard page: teruskan prop `initialBalance` dari summary ke SummaryCards.
+
+Phase 13: Budgeting Pembayaran (Payment Tracker & Eventual/Purchase Goals)
+[x] Schema Prisma: model `PaymentPlan` (id, name, description, amount, dueDate, isPaid, paidAt, paidNote, categoryId, userId, transactionId) tersinkronisasi ke Neon DB via `prisma db push` & `prisma generate`.
+[x] Server Actions: `lib/actions/payment-plan.actions.ts` untuk `getPaymentPlans()`, `createPaymentPlan()`, `updatePaymentPlan()`, `deletePaymentPlan()`, `payPaymentPlan()` (otomatis buat transaksi EXPENSE & kurangi saldo), dan `unpayPaymentPlan()` (hapus transaksi terkait & kembalikan saldo).
+[x] Form Input Masking Mata Uang: `components/payments/AddPaymentPlanModal.tsx` menggunakan currency mask format IDR (pemisah ribuan dinamis saat mengetik, parsing angka akurat).
+[x] Modal Konfirmasi Pembayaran: `components/payments/PayPaymentModal.tsx` dengan pilihan tanggal pembayaran aktual, catatan tambahan, dan konfirmasi pemotongan saldo.
+[x] Komponen Visual & Status: `components/payments/PaymentPlanCard.tsx` dengan status visual completion (Lunas, Lewat Jatuh Tempo, Belum Dibayar), tanggal jatuh tempo, nominal, tombol bayar, batalkan bayar, edit, dan hapus.
+[x] Halaman & Ringkasan: `/dashboard/payments` dan `components/payments/PaymentManager.tsx` dengan 3 Summary Cards (Total Budget, Belum Dibayar, Telah Dibayarkan) serta filter tab (Semua, Belum Dibayar, Lunas).
+[x] Navigasi: Menu "Pembayaran" ditambahkan ke `components/layout/Sidebar.tsx`.
+[x] Verifikasi: `prisma db push` sukses ke Neon DB dan `npx tsc --noEmit` lolos tanpa error.

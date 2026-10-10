@@ -22,6 +22,7 @@ model User {
   savingGoals    SavingGoal[]
   categories     Category[]
   budgets        Budget[]
+  paymentPlans   PaymentPlan[]
 
   @@map("users")
 }
@@ -98,6 +99,25 @@ model Budget {
 
   @@unique([userId, categoryId, month, year])
   @@map("budgets")
+}
+
+model PaymentPlan {
+  id          String            @id @default(uuid())
+  name        String
+  description String?
+  amount      Float
+  dueDate     DateTime
+  isPaid      Boolean           @default(false)
+  paidAt      DateTime?
+  paidNote    String?
+  categoryId  String?
+  userId      String
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactionId String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@map("payment_plans")
 }
 
 enum TransactionType {

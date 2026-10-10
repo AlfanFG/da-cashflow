@@ -43,6 +43,22 @@ export interface SavingGoal {
   createdAt: Date;
 }
 
+export interface PaymentPlan {
+  id: string;
+  name: string;
+  description?: string | null;
+  amount: number;
+  dueDate: Date | string;
+  isPaid: boolean;
+  paidAt?: Date | string | null;
+  paidNote?: string | null;
+  categoryId?: string | null;
+  userId: string;
+  transactionId?: string | null;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
 export interface DashboardSummary {
   totalBalance: number;
   totalIncomeThisMonth: number;

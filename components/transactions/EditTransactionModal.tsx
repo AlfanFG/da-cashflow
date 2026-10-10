@@ -36,6 +36,7 @@ export function EditTransactionModal({ transaction, open, onClose }: EditTransac
   const [date, setDate] = useState<Date>(new Date(transaction.date));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
+  const selectedCategory = categories.find((c) => c.id === categoryId);
 
   useEffect(() => {
     if (open) {
@@ -97,9 +98,18 @@ export function EditTransactionModal({ transaction, open, onClose }: EditTransac
 
           <div className="grid gap-2">
             <Label htmlFor="edit-category">Kategori</Label>
-            <Select value={categoryId} onValueChange={(val) => val && setCategoryId(val)}>
+            <Select key={`edit-cat-${transaction.id}-${open ? "open" : "closed"}`} value={selectedCategory ? categoryId : ""} onValueChange={(val) => val && setCategoryId(val)} items={categories.map((cat) => ({ value: cat.id, label: cat.name }))}>
               <SelectTrigger id="edit-category">
-                <SelectValue placeholder="Pilih Kategori" />
+                <SelectValue placeholder="Pilih Kategori">
+                  {selectedCategory ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: selectedCategory.color }} />
+                      <span>{selectedCategory.name}</span>
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground">Pilih Kategori</span>
+                  )}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {categories.map((cat) => (

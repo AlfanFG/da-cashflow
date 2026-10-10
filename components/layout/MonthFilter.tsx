@@ -38,9 +38,10 @@ function MonthFilterInner() {
         onValueChange={(val) => {
           if (val) pushFilter(parseInt(val), selectedYear);
         }}
+        items={MONTHS.map((m, idx) => ({ value: (idx + 1).toString(), label: m }))}
       >
         <SelectTrigger className="w-[110px] sm:w-[140px] bg-white border-slate-200 shadow-sm rounded-xl">
-          <SelectValue placeholder="Bulan" />
+          <SelectValue placeholder="Bulan">{MONTHS[selectedMonth - 1]}</SelectValue>
         </SelectTrigger>
         <SelectContent className="rounded-xl">
           {MONTHS.map((month, idx) => (
@@ -56,9 +57,10 @@ function MonthFilterInner() {
         onValueChange={(val) => {
           if (val) pushFilter(selectedMonth, parseInt(val));
         }}
+        items={years.map((year) => ({ value: year.toString(), label: year.toString() }))}
       >
         <SelectTrigger className="w-[85px] sm:w-[100px] bg-white border-slate-200 shadow-sm rounded-xl">
-          <SelectValue placeholder="Tahun" />
+          <SelectValue placeholder="Tahun">{selectedYear}</SelectValue>
         </SelectTrigger>
         <SelectContent className="rounded-xl">
           {years.map((year) => (

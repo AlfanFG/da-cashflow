@@ -29,9 +29,23 @@ export async function createPaymentPlan(data: {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
 
+  // Jika categoryId tidak dikirim, default ke kategori 'Lainnya (Pengeluaran)' / 'Lainnya'
+  let categoryId = data.categoryId;
+  if (!categoryId) {
+    const defaultCat = await db.category.findFirst({
+      where: {
+        userId: session.user.id,
+        type: "EXPENSE",
+        name: { in: ["Lainnya (Pengeluaran)", "Lainnya"] },
+      },
+    });
+    categoryId = defaultCat?.id;
+  }
+
   const plan = await db.paymentPlan.create({
     data: {
       ...data,
+      categoryId,
       paidAmount: 0,
       isPaid: false,
       userId: session.user.id,
@@ -130,18 +144,25 @@ export async function payPaymentPlan(
   const remaining = Math.max(0, plan.amount - currentPaid);
   const paymentAmount = Math.min(data.amount, remaining > 0 ? remaining : data.amount);
 
-  // Cari kategori EXPENSE yang sesuai (pakai categoryId dari plan, atau fallback)
+  // Cari kategori EXPENSE yang sesuai (pakai categoryId dari plan, atau fallback ke Lainnya)
   let categoryId = plan.categoryId;
   if (!categoryId) {
     const fallbackCategory = await db.category.findFirst({
       where: {
         userId: session.user.id,
         type: "EXPENSE",
-        name: { in: ["Tagihan", "Sehari-hari", "Jajan"] },
+        name: { in: ["Lainnya (Pengeluaran)", "Lainnya", "Tagihan", "Sehari-hari"] },
       },
     });
     const anyExpense =
       fallbackCategory ??
+      (await db.category.findFirst({
+        where: {
+          userId: session.user.id,
+          type: "EXPENSE",
+          name: { notIn: ["Jajan", "Tabungan"] },
+        },
+      })) ??
       (await db.category.findFirst({
         where: { userId: session.user.id, type: "EXPENSE" },
       }));
@@ -208,17 +229,36 @@ export async function unpayPaymentPlan(id: string) {
   });
   if (!plan) throw new Error("Payment plan tidak ditemukan");
 
-  // Hapus semua transaksi pembayaran terkait agar saldo kembali utuh
-  const txIds = plan.payments
-    .map((p) => p.transactionId)
-    .filter((tid): tid is string => Boolean(tid));
-  if (plan.transactionId && !txIds.includes(plan.transactionId)) {
-    txIds.push(plan.transactionId);
+  const totalPaid =
+    (plan.paidAmount ?? 0) > 0
+      ? plan.paidAmount
+      : plan.payments.reduce((acc, p) => acc + p.amount, 0) || (plan.isPaid ? plan.amount : 0);
+
+  // Cari kategori INCOME untuk mencatat uang masuk ke saldo di riwayat
+  let incomeCategory = await db.category.findFirst({
+    where: {
+      userId: session.user.id,
+      type: "INCOME",
+      name: { in: ["Lainnya (Pemasukan)", "Lainnya"] },
+    },
+  });
+  if (!incomeCategory) {
+    incomeCategory = await db.category.findFirst({
+      where: { userId: session.user.id, type: "INCOME" },
+    });
   }
 
-  if (txIds.length > 0) {
-    await db.transaction.deleteMany({
-      where: { id: { in: txIds }, userId: session.user.id },
+  // Jika ada dana yang pernah terbayar, buat transaksi INCOME agar tercatat jelas di riwayat sebagai uang masuk ke saldo
+  if (totalPaid > 0 && incomeCategory) {
+    await db.transaction.create({
+      data: {
+        userId: session.user.id,
+        categoryId: incomeCategory.id,
+        amount: totalPaid,
+        type: "INCOME",
+        date: new Date(),
+        note: `Pengembalian: Pembatalan Pembayaran ${plan.name}`,
+      },
     });
   }
 
@@ -258,14 +298,36 @@ export async function deletePaymentRecord(recordId: string) {
     throw new Error("Catatan pembayaran tidak ditemukan");
   }
 
-  // Hapus transaksi terkait di Cashflow agar saldo dikembalikan
-  if (record.transactionId) {
-    await db.transaction.deleteMany({
-      where: { id: record.transactionId, userId: session.user.id },
+  const plan = record.paymentPlan;
+
+  // Cari kategori INCOME untuk mencatat uang masuk ke saldo di riwayat
+  let incomeCategory = await db.category.findFirst({
+    where: {
+      userId: session.user.id,
+      type: "INCOME",
+      name: { in: ["Lainnya (Pemasukan)", "Lainnya"] },
+    },
+  });
+  if (!incomeCategory) {
+    incomeCategory = await db.category.findFirst({
+      where: { userId: session.user.id, type: "INCOME" },
     });
   }
 
-  const plan = record.paymentPlan;
+  // Buat transaksi INCOME agar uang masuk tercatat di riwayat transaksi dan saldo utama bertambah
+  if (incomeCategory) {
+    await db.transaction.create({
+      data: {
+        userId: session.user.id,
+        categoryId: incomeCategory.id,
+        amount: record.amount,
+        type: "INCOME",
+        date: new Date(),
+        note: `Pengembalian: Pembatalan Cicilan ${plan.name}${record.note ? ` — ${record.note}` : ""}`,
+      },
+    });
+  }
+
   const newPaidAmount = Math.max(0, (plan.paidAmount ?? 0) - record.amount);
   const isPaid = newPaidAmount >= plan.amount;
 
@@ -285,3 +347,4 @@ export async function deletePaymentRecord(recordId: string) {
   revalidatePath("/dashboard/budgets");
   return { success: true };
 }
+

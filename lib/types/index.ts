@@ -43,11 +43,22 @@ export interface SavingGoal {
   createdAt: Date;
 }
 
+export interface PaymentRecord {
+  id: string;
+  amount: number;
+  date: Date | string;
+  note?: string | null;
+  paymentPlanId: string;
+  transactionId?: string | null;
+  createdAt: Date | string;
+}
+
 export interface PaymentPlan {
   id: string;
   name: string;
   description?: string | null;
   amount: number;
+  paidAmount: number;
   dueDate: Date | string;
   isPaid: boolean;
   paidAt?: Date | string | null;
@@ -55,6 +66,7 @@ export interface PaymentPlan {
   categoryId?: string | null;
   userId: string;
   transactionId?: string | null;
+  payments?: PaymentRecord[];
   createdAt: Date | string;
   updatedAt: Date | string;
 }

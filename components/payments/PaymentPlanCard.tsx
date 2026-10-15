@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
   CalendarIcon,
@@ -14,10 +15,17 @@ import {
   Trash2,
   CreditCard,
   Undo2,
+  ChevronDown,
+  ChevronUp,
+  History,
 } from "lucide-react";
 import { PayPaymentModal } from "@/components/payments/PayPaymentModal";
 import { AddPaymentPlanModal } from "@/components/payments/AddPaymentPlanModal";
-import { deletePaymentPlan, unpayPaymentPlan } from "@/lib/actions/payment-plan.actions";
+import {
+  deletePaymentPlan,
+  unpayPaymentPlan,
+  deletePaymentRecord,
+} from "@/lib/actions/payment-plan.actions";
 import { toast } from "sonner";
 import { PaymentPlan } from "@/lib/types";
 
@@ -28,22 +36,39 @@ interface PaymentPlanCardProps {
 export function PaymentPlanCard({ plan }: PaymentPlanCardProps) {
   const [payModalOpen, setPayModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUnpaying, setIsUnpaying] = useState(false);
+  const [deletingRecordId, setDeletingRecordId] = useState<string | null>(null);
+
+  const currentPaid = plan.paidAmount ?? (plan.isPaid ? plan.amount : 0);
+  const remaining = Math.max(0, plan.amount - currentPaid);
+  const percentage =
+    plan.amount > 0 ? Math.min(100, Math.round((currentPaid / plan.amount) * 100)) : 0;
 
   const dueDate = new Date(plan.dueDate);
   const now = new Date();
-  // Strip time for clean date comparison
-  const isOverdue = !plan.isPaid && dueDate < new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const isOverdue =
+    !plan.isPaid &&
+    dueDate < new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  const isPartiallyPaid = currentPaid > 0 && !plan.isPaid;
 
   const handleDelete = async () => {
-    if (!confirm(`Hapus rencana pembayaran "${plan.name}"?`)) return;
+    if (
+      !confirm(
+        `Hapus rencana pembayaran "${plan.name}"? Semua transaksi pengeluaran terkait juga akan dihapus dan saldo utama akan disesuaikan.`
+      )
+    )
+      return;
     setIsDeleting(true);
     try {
       await deletePaymentPlan(plan.id);
       toast.success("Rencana pembayaran berhasil dihapus");
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Gagal menghapus pembayaran");
+      toast.error(
+        err instanceof Error ? err.message : "Gagal menghapus pembayaran"
+      );
     } finally {
       setIsDeleting(false);
     }
@@ -52,7 +77,7 @@ export function PaymentPlanCard({ plan }: PaymentPlanCardProps) {
   const handleUnpay = async () => {
     if (
       !confirm(
-        `Batalkan status lunas untuk "${plan.name}"? Transaksi pengeluaran terkait akan dihapus dan saldo utama akan dikembalikan.`
+        `Batalkan pembayaran untuk "${plan.name}"? Semua transaksi pengeluaran terkait akan dihapus dan saldo utama akan dikembalikan.`
       )
     )
       return;
@@ -60,11 +85,36 @@ export function PaymentPlanCard({ plan }: PaymentPlanCardProps) {
     setIsUnpaying(true);
     try {
       await unpayPaymentPlan(plan.id);
-      toast.success("Status pembayaran dikembalikan ke Belum Lunas. Saldo dikembalikan!");
+      toast.success(
+        "Status pembayaran di-reset ke Belum Lunas. Saldo dikembalikan!"
+      );
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Gagal membatalkan status bayar");
+      toast.error(
+        err instanceof Error ? err.message : "Gagal membatalkan status bayar"
+      );
     } finally {
       setIsUnpaying(false);
+    }
+  };
+
+  const handleDeleteRecord = async (recordId: string, recordAmount: number) => {
+    if (
+      !confirm(
+        `Hapus riwayat cicilan sebesar ${formatCurrency(recordAmount)}? Saldo utama akan dikembalikan.`
+      )
+    )
+      return;
+
+    setDeletingRecordId(recordId);
+    try {
+      await deletePaymentRecord(recordId);
+      toast.success("Catatan cicilan berhasil dihapus dan saldo dikembalikan!");
+    } catch (err: unknown) {
+      toast.error(
+        err instanceof Error ? err.message : "Gagal menghapus catatan cicilan"
+      );
+    } finally {
+      setDeletingRecordId(null);
     }
   };
 
@@ -75,6 +125,8 @@ export function PaymentPlanCard({ plan }: PaymentPlanCardProps) {
           "overflow-hidden border-0 shadow-sm shadow-slate-200 rounded-2xl transition-all hover:shadow-md " +
           (plan.isPaid
             ? "bg-gradient-to-br from-emerald-50/60 to-white border-l-4 border-l-emerald-500"
+            : isPartiallyPaid
+            ? "bg-gradient-to-br from-blue-50/50 to-white border-l-4 border-l-blue-500"
             : isOverdue
             ? "bg-gradient-to-br from-rose-50/40 to-white border-l-4 border-l-rose-500"
             : "bg-white border-l-4 border-l-violet-500")
@@ -87,7 +139,9 @@ export function PaymentPlanCard({ plan }: PaymentPlanCardProps) {
                 {plan.name}
               </CardTitle>
               {plan.description && (
-                <p className="text-xs text-slate-500 line-clamp-2">{plan.description}</p>
+                <p className="text-xs text-slate-500 line-clamp-2">
+                  {plan.description}
+                </p>
               )}
             </div>
 
@@ -95,6 +149,10 @@ export function PaymentPlanCard({ plan }: PaymentPlanCardProps) {
             {plan.isPaid ? (
               <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-0 flex items-center gap-1 shrink-0 font-medium text-[11px] px-2 py-0.5">
                 <CheckCircle2 className="h-3 w-3" /> Lunas
+              </Badge>
+            ) : isPartiallyPaid ? (
+              <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-0 flex items-center gap-1 shrink-0 font-medium text-[11px] px-2 py-0.5">
+                <Clock className="h-3 w-3" /> Dicicil ({percentage}%)
               </Badge>
             ) : isOverdue ? (
               <Badge className="bg-rose-100 text-rose-700 hover:bg-rose-100 border-0 flex items-center gap-1 shrink-0 font-medium text-[11px] px-2 py-0.5">
@@ -109,14 +167,47 @@ export function PaymentPlanCard({ plan }: PaymentPlanCardProps) {
         </CardHeader>
 
         <CardContent className="space-y-3 px-5 pb-4 pt-1">
-          {/* Amount / Budget */}
-          <div>
-            <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
-              Anggaran / Nominal
-            </span>
-            <p className="text-xl font-extrabold text-slate-800">
-              {formatCurrency(plan.amount)}
-            </p>
+          {/* Progress & Nominal Breakdown */}
+          <div className="space-y-2">
+            <div className="flex justify-between items-baseline text-xs">
+              <div>
+                <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider block">
+                  Terbayar
+                </span>
+                <span className="text-base font-extrabold text-slate-800">
+                  {formatCurrency(currentPaid)}
+                </span>
+              </div>
+              <div className="text-right">
+                <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider block">
+                  Total Target
+                </span>
+                <span className="text-sm font-semibold text-slate-500">
+                  {formatCurrency(plan.amount)}
+                </span>
+              </div>
+            </div>
+
+            <Progress
+              value={percentage}
+              className={
+                "h-2 " +
+                (plan.isPaid
+                  ? "bg-emerald-100"
+                  : isPartiallyPaid
+                  ? "bg-blue-100"
+                  : "bg-slate-100")
+              }
+            />
+
+            {!plan.isPaid && (
+              <div className="flex justify-between items-center text-[11px] font-medium text-slate-500 pt-0.5">
+                <span>Sisa Tagihan:</span>
+                <span className="font-bold text-rose-600">
+                  {formatCurrency(remaining)}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Dates & Payment Details */}
@@ -125,26 +216,80 @@ export function PaymentPlanCard({ plan }: PaymentPlanCardProps) {
               <span className="text-slate-400 flex items-center gap-1.5">
                 <CalendarIcon className="h-3.5 w-3.5" /> Jatuh Tempo:
               </span>
-              <span className={`font-semibold ${isOverdue ? "text-rose-600" : "text-slate-700"}`}>
+              <span
+                className={`font-semibold ${
+                  isOverdue ? "text-rose-600" : "text-slate-700"
+                }`}
+              >
                 {formatDate(plan.dueDate)}
               </span>
             </div>
 
-            {plan.isPaid && (
+            {plan.isPaid && plan.paidAt && (
               <div className="flex items-center justify-between border-t border-slate-100 pt-1.5">
-                <span className="text-slate-400">Dibayar Pada:</span>
+                <span className="text-slate-400">Lunas Pada:</span>
                 <span className="font-semibold text-emerald-600">
-                  {plan.paidAt ? formatDate(plan.paidAt) : "-"}
+                  {formatDate(plan.paidAt)}
                 </span>
               </div>
             )}
 
-            {plan.isPaid && plan.paidNote && (
+            {plan.paidNote && (
               <div className="text-[11px] text-slate-500 italic pt-1 border-t border-slate-100">
                 Catatan: "{plan.paidNote}"
               </div>
             )}
           </div>
+
+          {/* History Collapsible Button if installments exist */}
+          {plan.payments && plan.payments.length > 0 && (
+            <div className="border border-slate-100 rounded-xl overflow-hidden bg-slate-50/40">
+              <button
+                type="button"
+                onClick={() => setShowHistory(!showHistory)}
+                className="w-full flex items-center justify-between px-3 py-1.5 text-[11px] font-medium text-slate-600 hover:bg-slate-100/70 transition-colors"
+              >
+                <span className="flex items-center gap-1.5">
+                  <History className="h-3.5 w-3.5 text-slate-400" />
+                  Riwayat Pembayaran ({plan.payments.length}x)
+                </span>
+                {showHistory ? (
+                  <ChevronUp className="h-3.5 w-3.5 text-slate-400" />
+                ) : (
+                  <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+                )}
+              </button>
+
+              {showHistory && (
+                <div className="p-2 space-y-1.5 border-t border-slate-100 bg-white">
+                  {plan.payments.map((p) => (
+                    <div
+                      key={p.id}
+                      className="flex items-center justify-between text-[11px] py-1 px-2 rounded-lg bg-slate-50 border border-slate-100"
+                    >
+                      <div>
+                        <p className="font-bold text-slate-800">
+                          {formatCurrency(p.amount)}
+                        </p>
+                        <p className="text-[10px] text-slate-400">
+                          {formatDate(p.date)} {p.note ? `• ${p.note}` : ""}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteRecord(p.id, p.amount)}
+                        disabled={deletingRecordId === p.id}
+                        className="text-slate-400 hover:text-rose-600 p-1"
+                        title="Batalkan cicilan ini"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
@@ -155,7 +300,8 @@ export function PaymentPlanCard({ plan }: PaymentPlanCardProps) {
                   onClick={() => setPayModalOpen(true)}
                   className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-xs h-8.5 font-medium shadow-sm shadow-emerald-200"
                 >
-                  <CreditCard className="mr-1.5 h-3.5 w-3.5" /> Bayar Sekarang
+                  <CreditCard className="mr-1.5 h-3.5 w-3.5" />
+                  {isPartiallyPaid ? "Cicil / Bayar Sisa" : "Bayar Sekarang"}
                 </Button>
                 <Button
                   size="icon"
@@ -206,7 +352,12 @@ export function PaymentPlanCard({ plan }: PaymentPlanCardProps) {
       </Card>
 
       <PayPaymentModal
-        plan={{ id: plan.id, name: plan.name, amount: plan.amount }}
+        plan={{
+          id: plan.id,
+          name: plan.name,
+          amount: plan.amount,
+          paidAmount: currentPaid,
+        }}
         open={payModalOpen}
         onClose={() => setPayModalOpen(false)}
       />

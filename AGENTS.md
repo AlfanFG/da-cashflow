@@ -178,3 +178,12 @@ Phase 13: Budgeting Pembayaran (Payment Tracker & Eventual/Purchase Goals)
 [x] Halaman & Ringkasan: `/dashboard/payments` dan `components/payments/PaymentManager.tsx` dengan 3 Summary Cards (Total Budget, Belum Dibayar, Telah Dibayarkan) serta filter tab (Semua, Belum Dibayar, Lunas).
 [x] Navigasi: Menu "Pembayaran" ditambahkan ke `components/layout/Sidebar.tsx`.
 [x] Verifikasi: `prisma db push` sukses ke Neon DB dan `npx tsc --noEmit` lolos tanpa error.
+
+Phase 14: Revisi Pembayaran Bertahap / Cicilan (Partial Payments)
+[x] Schema Prisma: penambahan field `paidAmount Float @default(0)` pada model `PaymentPlan` dan model `PaymentRecord` (id, amount, date, note, paymentPlanId, transactionId) untuk mencatat riwayat cicilan/pembayaran bertahap.
+[x] Sinkronisasi Neon DB: `prisma db push` + `prisma generate` sukses tanpa menghapus data yang ada.
+[x] Server Actions: `payPaymentPlan` kini menerima nominal yang dibayarkan (`amount`), memvalidasi nominal, membuat transaksi pengeluaran (EXPENSE) sesuai nominal yang dibayar, membuat `PaymentRecord`, dan memperbarui `paidAmount` serta status `isPaid` secara dinamis. Ditambahkan `deletePaymentRecord` untuk membatalkan cicilan tertentu dan mengembalikan saldo.
+[x] Modal Pembayaran (`PayPaymentModal.tsx`): Form nominal pembayaran dengan masking mata uang IDR (`id-ID`), tombol cepat "Bayar Penuh Sisa", preview progress bar setelah bayar, serta ringkasan sisa tagihan.
+[x] Visual Card (`PaymentPlanCard.tsx`): Progress bar pembayaran (terbayar vs target), sisa tagihan, badge status "Dicicil (X%)" untuk pembayaran bertahap, tombol "Cicil / Bayar Sisa", serta accordion riwayat pembayaran cicilan dengan opsi hapus/batalkan cicilan per transaksi.
+[x] Ringkasan Dashboard (`PaymentManager.tsx`): Perhitungan akurat total anggaran, akumulasi dana terbayar, dan sisa tagihan aktif.
+[x] Verifikasi: `rtk proxy npx tsc --noEmit` lolos dengan 0 error.

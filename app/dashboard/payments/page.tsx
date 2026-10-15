@@ -15,6 +15,11 @@ export default async function PaymentsPage() {
     paidAt: p.paidAt ? p.paidAt.toISOString() : null,
     createdAt: p.createdAt.toISOString(),
     updatedAt: p.updatedAt.toISOString(),
+    payments: p.payments?.map((rec) => ({
+      ...rec,
+      date: rec.date.toISOString(),
+      createdAt: rec.createdAt.toISOString(),
+    })) ?? [],
   }));
 
   return (

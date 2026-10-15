@@ -35,8 +35,11 @@ export function PaymentManager({ plans }: PaymentManagerProps) {
 
   // Summary figures
   const totalAllAmount = plans.reduce((acc, p) => acc + p.amount, 0);
-  const totalUnpaidAmount = unpaidPlans.reduce((acc, p) => acc + p.amount, 0);
-  const totalPaidAmount = paidPlans.reduce((acc, p) => acc + p.amount, 0);
+  const totalPaidAmount = plans.reduce(
+    (acc, p) => acc + (p.paidAmount ?? (p.isPaid ? p.amount : 0)),
+    0
+  );
+  const totalUnpaidAmount = Math.max(0, totalAllAmount - totalPaidAmount);
 
   const displayedPlans = plans.filter((plan) => {
     if (filterTab === "UNPAID") return !plan.isPaid;
@@ -166,7 +169,7 @@ export function PaymentManager({ plans }: PaymentManagerProps) {
               : "text-slate-600 hover:bg-slate-100"
           }`}
         >
-          Belum Dibayar ({unpaidPlans.length})
+          Belum Lunas ({unpaidPlans.length})
         </button>
         <button
           onClick={() => setFilterTab("PAID")}

@@ -1,10 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -17,27 +16,69 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { CalendarIcon, CheckCircle2 } from "lucide-react";
+import { CalendarIcon, CreditCard, CheckCircle2, Zap } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { cn, formatCurrency } from "@/lib/utils";
 import { payPaymentPlan } from "@/lib/actions/payment-plan.actions";
 import { toast } from "sonner";
+import { Progress } from "@/components/ui/progress";
 
 interface PayPaymentModalProps {
   plan: {
     id: string;
     name: string;
     amount: number;
+    paidAmount?: number;
   };
   open: boolean;
   onClose: () => void;
 }
 
+// ─── Currency Masking Helper ──────────────────────────────────────────────────
+function parseCurrencyInput(value: string): number {
+  const digits = value.replace(/\D/g, "");
+  return digits === "" ? 0 : parseInt(digits, 10);
+}
+
+function formatCurrencyInput(value: number): string {
+  if (value === 0) return "";
+  return value.toLocaleString("id-ID");
+}
+
 export function PayPaymentModal({ plan, open, onClose }: PayPaymentModalProps) {
+  const currentPaid = plan.paidAmount ?? 0;
+  const remaining = Math.max(0, plan.amount - currentPaid);
+
+  const [amountRaw, setAmountRaw] = useState<number>(remaining);
+  const [amountDisplay, setAmountDisplay] = useState<string>(
+    formatCurrencyInput(remaining)
+  );
   const [note, setNote] = useState("");
   const [paidAt, setPaidAt] = useState<Date>(new Date());
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Sync default nominal to remaining when modal opens or plan changes
+  useEffect(() => {
+    if (open) {
+      const rem = Math.max(0, plan.amount - (plan.paidAmount ?? 0));
+      setAmountRaw(rem);
+      setAmountDisplay(rem > 0 ? formatCurrencyInput(rem) : "");
+      setNote("");
+      setPaidAt(new Date());
+    }
+  }, [open, plan]);
+
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = parseCurrencyInput(e.target.value);
+    setAmountRaw(raw);
+    setAmountDisplay(raw === 0 ? "" : formatCurrencyInput(raw));
+  };
+
+  const handlePayFull = () => {
+    setAmountRaw(remaining);
+    setAmountDisplay(formatCurrencyInput(remaining));
+  };
 
   const handleClose = () => {
     setNote("");
@@ -45,16 +86,35 @@ export function PayPaymentModal({ plan, open, onClose }: PayPaymentModalProps) {
     onClose();
   };
 
+  const isFullPayment = amountRaw >= remaining && remaining > 0;
+  const remainingAfterPayment = Math.max(0, remaining - amountRaw);
+  const currentPercentage = plan.amount > 0 ? Math.min(100, Math.round((currentPaid / plan.amount) * 100)) : 0;
+  const newPercentage = plan.amount > 0 ? Math.min(100, Math.round(((currentPaid + amountRaw) / plan.amount) * 100)) : 0;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (amountRaw <= 0) {
+      toast.error("Nominal pembayaran harus lebih dari nol");
+      return;
+    }
 
     setIsSubmitting(true);
     try {
-      await payPaymentPlan(plan.id, {
+      const result = await payPaymentPlan(plan.id, {
+        amount: amountRaw,
         note: note.trim() || undefined,
         paidAt,
       });
-      toast.success(`Pembayaran "${plan.name}" berhasil dicatat! Saldo berkurang ${formatCurrency(plan.amount)}`);
+
+      if (result.isPaid) {
+        toast.success(
+          `Pembayaran "${plan.name}" lunas! Saldo berkurang ${formatCurrency(amountRaw)}`
+        );
+      } else {
+        toast.success(
+          `Cicilan "${plan.name}" sebesar ${formatCurrency(amountRaw)} berhasil dicatat!`
+        );
+      }
       handleClose();
     } catch (err: unknown) {
       toast.error(
@@ -67,36 +127,110 @@ export function PayPaymentModal({ plan, open, onClose }: PayPaymentModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
-      <DialogContent className="sm:max-w-[420px]">
+      <DialogContent className="sm:max-w-[460px]">
         <DialogHeader>
           <div className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-lg bg-emerald-100 flex items-center justify-center">
-              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              <CreditCard className="h-4 w-4 text-emerald-600" />
             </div>
-            <DialogTitle>Konfirmasi Pembayaran</DialogTitle>
+            <DialogTitle>Bayar Tagihan / Cicilan</DialogTitle>
           </div>
         </DialogHeader>
 
-        {/* Info Pembayaran */}
-        <div className="bg-slate-50 rounded-xl p-4 space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-slate-500">Nama</span>
-            <span className="font-semibold text-slate-800">{plan.name}</span>
+        {/* Info Ringkasan Tagihan */}
+        <div className="bg-slate-50/90 rounded-2xl p-4 space-y-3 border border-slate-100">
+          <div className="flex justify-between items-start">
+            <div>
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                Nama Tagihan
+              </span>
+              <p className="font-bold text-slate-800 text-base">{plan.name}</p>
+            </div>
+            <div className="text-right">
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                Total Anggaran
+              </span>
+              <p className="font-bold text-slate-700">{formatCurrency(plan.amount)}</p>
+            </div>
           </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-slate-500">Nominal</span>
-            <span className="font-bold text-rose-600 text-base">{formatCurrency(plan.amount)}</span>
+
+          <div>
+            <div className="flex justify-between text-xs font-medium text-slate-600 mb-1.5">
+              <span>Sudah Terbayar: <strong className="text-emerald-600">{formatCurrency(currentPaid)}</strong></span>
+              <span>Sisa: <strong className="text-rose-600">{formatCurrency(remaining)}</strong></span>
+            </div>
+            <Progress value={currentPercentage} className="h-2 bg-slate-200/80" />
           </div>
         </div>
 
-        <p className="text-xs text-slate-500 -mt-1">
-          Saldo akun Anda akan berkurang sebesar <strong>{formatCurrency(plan.amount)}</strong> dan dicatat di riwayat transaksi.
-        </p>
+        <form onSubmit={handleSubmit} className="grid gap-4 py-1">
+          {/* Form Nominal Pembayaran dengan Masking Mata Uang */}
+          <div className="grid gap-2">
+            <div className="flex justify-between items-center">
+              <Label htmlFor="payment-amount" className="font-semibold text-slate-700">
+                Nominal yang Dibayarkan (Rp)
+              </Label>
+              {remaining > 0 && amountRaw !== remaining && (
+                <button
+                  type="button"
+                  onClick={handlePayFull}
+                  className="text-xs text-violet-600 hover:text-violet-700 font-semibold flex items-center gap-1 hover:underline"
+                >
+                  <Zap className="h-3 w-3" /> Bayar Penuh Sisa ({formatCurrency(remaining)})
+                </button>
+              )}
+            </div>
 
-        <form onSubmit={handleSubmit} className="grid gap-4">
+            <div className="relative">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-500 pointer-events-none">
+                Rp
+              </span>
+              <Input
+                id="payment-amount"
+                type="text"
+                inputMode="numeric"
+                placeholder="0"
+                value={amountDisplay}
+                onChange={handleAmountChange}
+                className="pl-11 text-right font-extrabold text-slate-900 text-lg tracking-tight"
+                autoFocus
+              />
+            </div>
+
+            {/* Live Status Hint */}
+            {amountRaw > 0 && (
+              <div
+                className={cn(
+                  "p-2.5 rounded-xl text-xs flex items-center justify-between border",
+                  isFullPayment
+                    ? "bg-emerald-50 text-emerald-800 border-emerald-200/70"
+                    : "bg-blue-50 text-blue-800 border-blue-200/70"
+                )}
+              >
+                <div className="flex items-center gap-1.5">
+                  {isFullPayment ? (
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                  ) : (
+                    <CreditCard className="h-4 w-4 text-blue-600 shrink-0" />
+                  )}
+                  <span>
+                    {isFullPayment
+                      ? "Pembayaran ini akan melunasi seluruh sisa tagihan! 🎉"
+                      : `Cicilan sebagian. Sisa setelah ini: ${formatCurrency(remainingAfterPayment)}`}
+                  </span>
+                </div>
+                <span className="font-bold shrink-0">{newPercentage}%</span>
+              </div>
+            )}
+
+            <p className="text-[11px] text-slate-400">
+              Saldo akun akan otomatis berkurang sebesar nominal yang dibayarkan dan tercatat di riwayat transaksi.
+            </p>
+          </div>
+
           {/* Tanggal Bayar */}
           <div className="grid gap-2">
-            <Label>Tanggal Pembayaran</Label>
+            <Label className="font-semibold text-slate-700">Tanggal Pembayaran</Label>
             <Popover>
               <PopoverTrigger
                 className={cn(
@@ -116,18 +250,21 @@ export function PayPaymentModal({ plan, open, onClose }: PayPaymentModalProps) {
             </Popover>
           </div>
 
-          {/* Catatan */}
+          {/* Catatan Pembayaran */}
           <div className="grid gap-2">
-            <Label htmlFor="pay-note">Catatan (Opsional)</Label>
+            <Label htmlFor="pay-note" className="font-semibold text-slate-700">
+              Catatan (Opsional)
+            </Label>
             <Input
               id="pay-note"
-              placeholder="Misal: Transfer BCA, Cash, dll."
+              placeholder="Misal: Cicilan ke-1, Transfer BCA, DP 50%, dll."
               value={note}
               onChange={(e) => setNote(e.target.value)}
             />
           </div>
 
-          <div className="flex justify-end gap-2 mt-1">
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-2 mt-2 pt-2 border-t border-slate-100">
             <Button
               type="button"
               variant="outline"
@@ -138,10 +275,19 @@ export function PayPaymentModal({ plan, open, onClose }: PayPaymentModalProps) {
             </Button>
             <Button
               type="submit"
-              disabled={isSubmitting}
-              className="bg-emerald-600 hover:bg-emerald-700"
+              disabled={isSubmitting || amountRaw <= 0}
+              className={cn(
+                "font-semibold text-white",
+                isFullPayment
+                  ? "bg-emerald-600 hover:bg-emerald-700 shadow-sm shadow-emerald-200"
+                  : "bg-violet-600 hover:bg-violet-700 shadow-sm shadow-violet-200"
+              )}
             >
-              {isSubmitting ? "Memproses..." : "Bayar Sekarang"}
+              {isSubmitting
+                ? "Memproses..."
+                : isFullPayment
+                ? `Lunasi ${formatCurrency(amountRaw)}`
+                : `Bayar Cicilan ${formatCurrency(amountRaw)}`}
             </Button>
           </div>
         </form>
